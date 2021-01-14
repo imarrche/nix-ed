@@ -1,15 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
 
-func fetchPosts() {
-	r, err := http.Get("https://jsonplaceholder.typicode.com/posts")
+var n = 100
+
+func fetchPostByID(id int, ch chan string) {
+	r, err := http.Get(fmt.Sprintf("https://jsonplaceholder.typicode.com/posts/%d", id))
 	if err != nil {
-		log.Fatalf("couldn't fetch posts: %v", err)
+		log.Fatalf("couldn't fetch post %d: %v", id, err)
 	}
 	defer r.Body.Close()
 
@@ -18,9 +21,16 @@ func fetchPosts() {
 		log.Fatal(err)
 	}
 
-	log.Println(string(body))
+	ch <- string(body)
 }
 
 func main() {
-	fetchPosts()
+	ch := make(chan string)
+	for id := 1; id <= n; id++ {
+		go fetchPostByID(id, ch)
+	}
+
+	for i := 1; i <= n; i++ {
+		log.Println(<-ch)
+	}
 }
