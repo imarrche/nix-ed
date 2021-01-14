@@ -1,58 +1,17 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 
 	"github.com/imarrche/nix-ed/pkg/model"
 )
-
-var (
-	createPostsTableQuery = `
-		CREATE TABLE posts(
-			id int primary key,
-			title text,
-			body text,
-			user_id int
-		);
-	`
-	createCommentsTableQuery = `
-		CREATE TABLE comments(
-			id int primary key,
-			name text,
-			email text,
-			body text,
-			post_id int
-		);
-	`
-	insertPostQuery = `
-		INSERT INTO posts (id, title, body, user_id) VALUES (?, ?, ?, ?);
-	`
-	insertCommentQuery = `
-		INSERT INTO comments (id, name, email, body, post_id) VALUES (?, ?, ?, ?, ?);
-	`
-)
-
-func migrate(db *sql.DB) error {
-	if _, err := db.Exec("DROP TABLE IF EXISTS posts;"); err != nil {
-		return err
-	}
-	if _, err := db.Exec(createPostsTableQuery); err != nil {
-		return err
-	}
-	if _, err := db.Exec("DROP TABLE IF EXISTS comments;"); err != nil {
-		return err
-	}
-	if _, err := db.Exec(createCommentsTableQuery); err != nil {
-		return err
-	}
-	return nil
-}
 
 func fetchPostsByUserID(id int) (ps []model.Post, err error) {
 	r, err := http.Get(fmt.Sprintf("https://jsonplaceholder.typicode.com/posts?userId=%d", id))
@@ -84,36 +43,14 @@ func fetchComments(posts []model.Post, ch chan model.Comment) {
 	close(ch)
 }
 
-func savePost(db *sql.DB, p model.Post) error {
-	if _, err := db.Exec(insertPostQuery, p.ID, p.Title, p.Body, p.UserID); err != nil {
-		return err
-	}
-	return nil
-}
-
-func saveComments(db *sql.DB, ch chan model.Comment, done chan struct{}) {
-	for c := range ch {
-		if _, err := db.Exec(insertCommentQuery, c.ID, c.Name, c.Email, c.Body, c.PostID); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	done <- struct{}{}
-}
-
 func main() {
-	db, err := sql.Open("mysql", "root:password@/posts")
+	db, err := gorm.Open(mysql.Open("root:password@/posts"), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
 
-	if err := migrate(db); err != nil {
-		log.Fatal(err)
-	}
+	db.AutoMigrate(&model.Post{})
+	db.AutoMigrate(&model.Comment{})
 
 	ch := make(chan model.Comment)
 	done := make(chan struct{})
@@ -122,11 +59,17 @@ func main() {
 		log.Fatal(err)
 	}
 	for _, p := range posts {
-		savePost(db, p)
+		db.Create(&p)
 	}
 
 	go fetchComments(posts, ch)
-	go saveComments(db, ch, done)
+	go func() {
+		for c := range ch {
+			db.Create(&c)
+		}
+
+		done <- struct{}{}
+	}()
 
 	<-done
 }
