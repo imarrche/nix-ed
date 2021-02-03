@@ -12,7 +12,7 @@ type Repo interface {
 	DeleteByID(int) error
 }
 
-// Service is the interface all service repositories must implement.
+// Service is the interface all post services must implement.
 type Service interface {
 	GetAll() ([]model.Post, error)
 	Create(model.Post) (model.Post, error)
