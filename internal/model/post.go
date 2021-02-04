@@ -1,10 +1,9 @@
+// Package model keep all project related business models.
 package model
 
-import "gorm.io/gorm"
-
+// Post model represents a post.
 type Post struct {
-	gorm.Model
-	ID     int    `json:"id"`
+	ID     int    `json:"id" gorm:"primaryKey"`
 	Title  string `json:"title"`
 	Body   string `json:"body"`
 	UserID int    `json:"userId"`
