@@ -40,6 +40,9 @@ func (s *service) Update(p model.Post) (model.Post, error) {
 
 	up.Title = p.Title
 	up.Body = p.Body
+	if err := up.Validate(); err != nil {
+		return model.Post{}, err
+	}
 
 	return s.r.Update(up)
 }
