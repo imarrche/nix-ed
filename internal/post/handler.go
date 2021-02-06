@@ -2,6 +2,7 @@ package post
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"net/http"
 	"strconv"
 
@@ -36,15 +37,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // respond is a helper function for encapsulating responding logic.
-func (h *Handler) respond(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
+func (h *Handler) respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
 	w.WriteHeader(status)
+
+	type encoder interface {
+		Encode(interface{}) error
+	}
+
+	var enc encoder
+	if r.Header.Get("Accept-Encoding") == "application/xml" {
+		w.Header().Set("Content-Type", "application/xml")
+		enc = xml.NewEncoder(w)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		enc = json.NewEncoder(w)
+	}
+
 	if e, ok := data.(validation.Errors); ok {
-		json.NewEncoder(w).Encode(e)
+		enc.Encode(e)
 	} else if e, ok := data.(error); ok {
-		json.NewEncoder(w).Encode(map[string]interface{}{"error": e.Error()})
+		enc.Encode(map[string]interface{}{"error": e.Error()})
 	} else if data != nil {
-		json.NewEncoder(w).Encode(data)
+		enc.Encode(data)
 	}
 }
 
@@ -52,83 +66,83 @@ func (h *Handler) respond(w http.ResponseWriter, status int, data interface{}) {
 func (h *Handler) getAll(w http.ResponseWriter, r *http.Request) {
 	ps, err := h.s.GetAll()
 	if err != nil {
-		h.respond(w, http.StatusInternalServerError, nil)
+		h.respond(w, r, http.StatusInternalServerError, nil)
 		return
 	}
 
-	h.respond(w, http.StatusOK, ps)
+	h.respond(w, r, http.StatusOK, ps)
 }
 
 // create handles post creating.
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	p := model.Post{}
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		h.respond(w, http.StatusBadRequest, err)
+		h.respond(w, r, http.StatusBadRequest, err)
 		return
 	}
 
 	p, err := h.s.Create(p)
 	if err != nil {
-		h.respond(w, http.StatusBadRequest, err)
+		h.respond(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	h.respond(w, http.StatusCreated, p)
+	h.respond(w, r, http.StatusCreated, p)
 }
 
 // detail handles retrieving a single post.
 func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		h.respond(w, http.StatusInternalServerError, nil)
+		h.respond(w, r, http.StatusInternalServerError, nil)
 		return
 	}
 
 	p, err := h.s.GetByID(id)
 	if err != nil {
-		h.respond(w, http.StatusBadRequest, err)
+		h.respond(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	h.respond(w, http.StatusOK, p)
+	h.respond(w, r, http.StatusOK, p)
 }
 
 // update handles updating a post.
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		h.respond(w, http.StatusInternalServerError, nil)
+		h.respond(w, r, http.StatusInternalServerError, nil)
 		return
 	}
 
 	p := model.Post{}
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		h.respond(w, http.StatusBadRequest, err)
+		h.respond(w, r, http.StatusBadRequest, err)
 		return
 	}
 	p.ID = id
 
 	p, err = h.s.Update(p)
 	if err != nil {
-		h.respond(w, http.StatusBadRequest, err)
+		h.respond(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	h.respond(w, http.StatusOK, p)
+	h.respond(w, r, http.StatusOK, p)
 }
 
 // delete handles deleting a post.
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		h.respond(w, http.StatusInternalServerError, nil)
+		h.respond(w, r, http.StatusInternalServerError, nil)
 		return
 	}
 
 	if err = h.s.DeleteByID(id); err != nil {
-		h.respond(w, http.StatusBadRequest, err)
+		h.respond(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	h.respond(w, http.StatusNoContent, nil)
+	h.respond(w, r, http.StatusNoContent, nil)
 }

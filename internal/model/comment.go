@@ -7,11 +7,11 @@ import (
 
 // Comment model represents a post's comment.
 type Comment struct {
-	ID     int    `json:"id" gorm:"primaryKey"`
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-	Body   string `json:"body"`
-	PostID int    `json:"postId"`
+	ID     int    `json:"id" xml:"id" gorm:"primaryKey"`
+	Name   string `json:"name" xml:"name"`
+	Email  string `json:"email" xml:"email"`
+	Body   string `json:"body" xml:"body"`
+	PostID int    `json:"postId" xml:"post_id"`
 }
 
 // Validate validates comment's fields.
