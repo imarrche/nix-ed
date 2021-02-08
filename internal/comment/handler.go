@@ -26,6 +26,15 @@ func NewHandler(s Service) *Handler {
 	return &Handler{s}
 }
 
+// respond responds to request with XML or JSON.
+func respond(c echo.Context, code int, data interface{}) error {
+	if c.Request().Header.Get("Accept-Encoding") == "text/xml" {
+		return c.XML(code, data)
+	}
+
+	return c.JSON(code, data)
+}
+
 // GetAll returns comment list.
 // @Summary Show all comments
 // @Descriptions show all comments
@@ -42,7 +51,7 @@ func (h *Handler) GetAll(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	return c.JSON(http.StatusOK, cs)
+	return respond(c, http.StatusOK, cs)
 
 }
 
@@ -60,15 +69,15 @@ func (h *Handler) GetAll(c echo.Context) error {
 func (h *Handler) Create(c echo.Context) error {
 	cm := model.Comment{}
 	if err := c.Bind(&cm); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	cm, err := h.s.Create(cm)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusCreated, cm)
+	return respond(c, http.StatusCreated, cm)
 }
 
 // GetByID returns comment detail.
@@ -86,17 +95,17 @@ func (h *Handler) Create(c echo.Context) error {
 func (h *Handler) GetByID(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	cm, err := h.s.GetByID(id)
 	if err == ErrNotFound {
 		return c.NoContent(http.StatusNotFound)
 	} else if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusOK, cm)
+	return respond(c, http.StatusOK, cm)
 }
 
 // Update updates a comment.
@@ -115,12 +124,12 @@ func (h *Handler) GetByID(c echo.Context) error {
 func (h *Handler) Update(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	cm := model.Comment{}
 	if err := c.Bind(&cm); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 	cm.ID = id
 
@@ -128,10 +137,10 @@ func (h *Handler) Update(c echo.Context) error {
 	if err == ErrNotFound {
 		return c.NoContent(http.StatusNotFound)
 	} else if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusOK, cm)
+	return respond(c, http.StatusOK, cm)
 }
 
 // DeleteByID deletes a comment.
@@ -149,14 +158,14 @@ func (h *Handler) Update(c echo.Context) error {
 func (h *Handler) DeleteByID(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	err = h.s.DeleteByID(id)
 	if err == ErrNotFound {
 		return c.NoContent(http.StatusNotFound)
 	} else if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	return c.NoContent(http.StatusNoContent)

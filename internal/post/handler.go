@@ -25,6 +25,15 @@ func NewHandler(s Service) *Handler {
 	return &Handler{s}
 }
 
+// respond responds to request with XML or JSON.
+func respond(c echo.Context, code int, data interface{}) error {
+	if c.Request().Header.Get("Accept-Encoding") == "text/xml" {
+		return c.XML(code, data)
+	}
+
+	return c.JSON(code, data)
+}
+
 // GetAll returns post list.
 // @Summary Show all posts
 // @Descriptions show all posts
@@ -38,11 +47,10 @@ func NewHandler(s Service) *Handler {
 func (h *Handler) GetAll(c echo.Context) error {
 	ps, err := h.s.GetAll()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	return c.JSON(http.StatusOK, ps)
-
+	return respond(c, http.StatusOK, ps)
 }
 
 // Create creates a post.
@@ -59,15 +67,15 @@ func (h *Handler) GetAll(c echo.Context) error {
 func (h *Handler) Create(c echo.Context) error {
 	p := model.Post{}
 	if err := c.Bind(&p); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	p, err := h.s.Create(p)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusCreated, p)
+	return respond(c, http.StatusCreated, p)
 }
 
 // GetByID returns post detail.
@@ -85,17 +93,17 @@ func (h *Handler) Create(c echo.Context) error {
 func (h *Handler) GetByID(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	p, err := h.s.GetByID(id)
 	if err == ErrNotFound {
 		return c.NoContent(http.StatusNotFound)
 	} else if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusOK, p)
+	return respond(c, http.StatusOK, p)
 }
 
 // Update updates a post.
@@ -114,12 +122,12 @@ func (h *Handler) GetByID(c echo.Context) error {
 func (h *Handler) Update(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	p := model.Post{}
 	if err := c.Bind(&p); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 	p.ID = id
 
@@ -127,10 +135,10 @@ func (h *Handler) Update(c echo.Context) error {
 	if err == ErrNotFound {
 		return c.NoContent(http.StatusNotFound)
 	} else if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusOK, p)
+	return respond(c, http.StatusOK, p)
 }
 
 // DeleteByID deletes a post.
@@ -148,14 +156,14 @@ func (h *Handler) Update(c echo.Context) error {
 func (h *Handler) DeleteByID(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	err = h.s.DeleteByID(id)
 	if err == ErrNotFound {
 		return c.NoContent(http.StatusNotFound)
 	} else if err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return respond(c, http.StatusBadRequest, err)
 	}
 
 	return c.NoContent(http.StatusNoContent)
