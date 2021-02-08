@@ -4,15 +4,23 @@ import (
 	"log"
 	"os"
 
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	_ "github.com/imarrche/nix-ed/docs"
 	"github.com/imarrche/nix-ed/internal/comment"
 	"github.com/imarrche/nix-ed/internal/model"
 	"github.com/imarrche/nix-ed/internal/post"
 )
 
+// @title Nix-Ed REST API
+// @version 1.0
+// @description This is simple REST API with CRUD for posts and comments.
+// @host localhost:8080
+// @BasePath /api/
 func main() {
 	dsn := os.Getenv("DSN")
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -31,6 +39,7 @@ func main() {
 	ch := comment.NewHandler(comment.NewService(comment.NewRepo(db)))
 
 	e := echo.New()
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	api := e.Group("/api")
 
 	ps := api.Group("/posts")
