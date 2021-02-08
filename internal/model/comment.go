@@ -11,7 +11,7 @@ type Comment struct {
 	Name   string `json:"name" xml:"name"`
 	Email  string `json:"email" xml:"email"`
 	Body   string `json:"body" xml:"body"`
-	PostID int    `json:"postId" xml:"post_id"`
+	PostID int    `json:"postId" xml:"postId"`
 }
 
 // Validate validates comment's fields.

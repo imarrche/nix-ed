@@ -1,0 +1,317 @@
+basePath: /api/
+definitions:
+  comment.errResponse:
+    properties:
+      body:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      userId:
+        type: string
+    type: object
+  model.Comment:
+    properties:
+      body:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      postId:
+        type: integer
+    type: object
+  model.Post:
+    properties:
+      body:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      userId:
+        type: integer
+    type: object
+  post.errResponse:
+    properties:
+      body:
+        type: string
+      title:
+        type: string
+      userId:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is simple REST API with CRUD for posts and comments.
+  title: Nix-Ed REST API
+  version: "1.0"
+paths:
+  /comments:
+    get:
+      consumes:
+      - application/json
+      operationId: comment-list
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Comment'
+            type: array
+        "500":
+          description: ""
+      summary: Show all comments
+      tags:
+      - comments
+    post:
+      consumes:
+      - application/json
+      operationId: comment-create
+      parameters:
+      - description: comment data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.Comment'
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Comment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/comment.errResponse'
+      summary: Create a comment
+      tags:
+      - comments
+  /comments/{id}:
+    delete:
+      consumes:
+      - application/json
+      operationId: comment-delete
+      parameters:
+      - description: comment id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/comment.errResponse'
+        "404":
+          description: ""
+      summary: Comment delete
+      tags:
+      - comments
+    get:
+      consumes:
+      - application/json
+      operationId: comment-detail
+      parameters:
+      - description: comment id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Comment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/comment.errResponse'
+        "404":
+          description: ""
+      summary: Comment detail
+      tags:
+      - comments
+    patch:
+      consumes:
+      - application/json
+      operationId: comment-update
+      parameters:
+      - description: comment id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: comment data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.Comment'
+      produces:
+      - text/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Comment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/comment.errResponse'
+        "404":
+          description: ""
+      summary: Comment update
+      tags:
+      - comments
+  /posts:
+    get:
+      consumes:
+      - application/json
+      operationId: post-list
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Post'
+            type: array
+        "500":
+          description: ""
+      summary: Show all posts
+      tags:
+      - posts
+    post:
+      consumes:
+      - application/json
+      operationId: post-create
+      parameters:
+      - description: post data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.Post'
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Post'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/post.errResponse'
+      summary: Create a post
+      tags:
+      - posts
+  /posts/{id}:
+    delete:
+      consumes:
+      - application/json
+      operationId: posts-delete
+      parameters:
+      - description: post id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "204":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/post.errResponse'
+        "404":
+          description: ""
+      summary: Post delete
+      tags:
+      - posts
+    get:
+      consumes:
+      - application/json
+      operationId: post-detail
+      parameters:
+      - description: post id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Post'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/post.errResponse'
+        "404":
+          description: ""
+      summary: Post detail
+      tags:
+      - posts
+    patch:
+      consumes:
+      - application/json
+      operationId: post-update
+      parameters:
+      - description: post id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: post data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.Post'
+      produces:
+      - application/json
+      - text/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Post'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/post.errResponse'
+        "404":
+          description: ""
+      summary: Post update
+      tags:
+      - posts
+swagger: "2.0"

@@ -8,7 +8,7 @@ type Post struct {
 	ID     int    `json:"id" xml:"id" gorm:"primaryKey"`
 	Title  string `json:"title" xml:"title"`
 	Body   string `json:"body" xml:"body"`
-	UserID int    `json:"userId" json:"userId"`
+	UserID int    `json:"userId" xml:"userId"`
 }
 
 // Validate validates post's fields.
