@@ -2,10 +2,9 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/go-chi/chi"
+	"github.com/labstack/echo"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -30,21 +29,23 @@ func main() {
 
 	ph := post.NewHandler(post.NewService(post.NewRepo(db)))
 	ch := comment.NewHandler(comment.NewService(comment.NewRepo(db)))
-	r := chi.NewRouter()
-	r.Route("/api", func(r chi.Router) {
-		r.Route("/posts", func(r chi.Router) {
-			ph.Init(r)
-		})
-		r.Route("/comments", func(r chi.Router) {
-			ch.Init(r)
-		})
-	})
 
-	s := &http.Server{
-		Addr:    ":8080",
-		Handler: r,
-	}
+	e := echo.New()
+	api := e.Group("/api")
 
-	log.Println("sarting the server")
-	s.ListenAndServe()
+	ps := api.Group("/posts")
+	ps.GET("", ph.GetAll)
+	ps.POST("", ph.Create)
+	ps.GET("/:id", ph.GetByID)
+	ps.PATCH("/:id", ph.Update)
+	ps.DELETE("/:id", ph.DeleteByID)
+
+	cs := api.Group("/comments")
+	cs.GET("", ch.GetAll)
+	cs.POST("", ch.Create)
+	cs.GET("/:id", ch.GetByID)
+	cs.PATCH("/:id", ch.Update)
+	cs.DELETE("/:id", ch.DeleteByID)
+
+	e.Logger.Fatal(e.Start(":8080"))
 }
