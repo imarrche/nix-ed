@@ -18,6 +18,126 @@ import (
 	mockcomment "github.com/imarrche/nix-ed/internal/comment/mock"
 )
 
+func TestHandler_Auth(t *testing.T) {
+	next := func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	}
+
+	testcases := []struct {
+		name    string
+		mock    func(*mockauth.MockService)
+		expCode int
+	}{
+		{
+			name: "user is authenticated",
+			mock: func(s *mockauth.MockService) {
+				data := []byte(`{"id":"1","email":"u@t.com"}`)
+				s.EXPECT().GetUserInfo("token").Return(data, nil)
+			},
+			expCode: http.StatusOK,
+		},
+		{
+			name: "get user info error",
+			mock: func(s *mockauth.MockService) {
+				s.EXPECT().GetUserInfo("token").Return(nil, errors.New("internal error"))
+			},
+			expCode: http.StatusTemporaryRedirect,
+		},
+		{
+			name: "invalid auth data",
+			mock: func(s *mockauth.MockService) {
+				data := []byte(`{"id":1,"email":"u@t.com"}`)
+				s.EXPECT().GetUserInfo("token").Return(data, nil)
+			},
+			expCode: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range testcases {
+		c := gomock.NewController(t)
+		defer c.Finish()
+		as := mockauth.NewMockService(c)
+		tc.mock(as)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/comments", nil)
+		r.Header.Add("Authorization", "token")
+
+		ctx := echo.New().NewContext(r, w)
+
+		hf := NewHandler(nil, as).Auth(next)
+		hf(ctx)
+
+		assert.Equal(t, tc.expCode, w.Code)
+
+	}
+}
+
+func TestHandler_CommentAuthor(t *testing.T) {
+	next := func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	}
+
+	testcases := []struct {
+		name    string
+		mock    func(*mockcomment.MockService, model.Comment)
+		comment model.Comment
+		expCode int
+	}{
+		{
+			name: "user is comment author",
+			mock: func(s *mockcomment.MockService, cm model.Comment) {
+				s.EXPECT().GetByID(cm.ID).Return(cm, nil)
+			},
+			comment: model.Comment{ID: 1, Body: "Comment", Email: "u@t.com"},
+			expCode: http.StatusOK,
+		},
+		{
+			name: "comment not found",
+			mock: func(s *mockcomment.MockService, cm model.Comment) {
+				s.EXPECT().GetByID(cm.ID).Return(model.Comment{}, ErrNotFound)
+			},
+			comment: model.Comment{ID: 1, Body: "Comment", Email: "u@t.com"},
+			expCode: http.StatusNotFound,
+		},
+		{
+			name: "internal error",
+			mock: func(s *mockcomment.MockService, cm model.Comment) {
+				s.EXPECT().GetByID(cm.ID).Return(model.Comment{}, errors.New("internal error"))
+			},
+			comment: model.Comment{ID: 1, Body: "Comment", Email: "u@t.com"},
+			expCode: http.StatusInternalServerError,
+		},
+		{
+			name: "user is not a comment author",
+			mock: func(s *mockcomment.MockService, cm model.Comment) {
+				s.EXPECT().GetByID(cm.ID).Return(cm, nil)
+			},
+			comment: model.Comment{ID: 1, Body: "Comment", Email: "u2@t.com"},
+			expCode: http.StatusForbidden,
+		},
+	}
+
+	for _, tc := range testcases {
+		c := gomock.NewController(t)
+		defer c.Finish()
+		cs := mockcomment.NewMockService(c)
+		tc.mock(cs, tc.comment)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPatch, "/comments/1", nil)
+		r = r.WithContext(context.WithValue(r.Context(), uEmailKey, "u@t.com"))
+
+		ctx := echo.New().NewContext(r, w)
+		ctx.SetParamNames("id")
+		ctx.SetParamValues("1")
+
+		hf := NewHandler(cs, nil).CommentAuthor(next)
+		hf(ctx)
+
+		assert.Equal(t, tc.expCode, w.Code)
+
+	}
+}
+
 func TestHandler_GetAll(t *testing.T) {
 	testcases := []struct {
 		name        string

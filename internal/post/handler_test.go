@@ -18,6 +18,126 @@ import (
 	mockpost "github.com/imarrche/nix-ed/internal/post/mock"
 )
 
+func TestHandler_Auth(t *testing.T) {
+	next := func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	}
+
+	testcases := []struct {
+		name    string
+		mock    func(*mockauth.MockService)
+		expCode int
+	}{
+		{
+			name: "user is authenticated",
+			mock: func(s *mockauth.MockService) {
+				data := []byte(`{"id":"1","email":"u@t.com"}`)
+				s.EXPECT().GetUserInfo("token").Return(data, nil)
+			},
+			expCode: http.StatusOK,
+		},
+		{
+			name: "get user info error",
+			mock: func(s *mockauth.MockService) {
+				s.EXPECT().GetUserInfo("token").Return(nil, errors.New("internal error"))
+			},
+			expCode: http.StatusTemporaryRedirect,
+		},
+		{
+			name: "invalid auth data",
+			mock: func(s *mockauth.MockService) {
+				data := []byte(`{"id":1,"email":"u@t.com"}`)
+				s.EXPECT().GetUserInfo("token").Return(data, nil)
+			},
+			expCode: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range testcases {
+		c := gomock.NewController(t)
+		defer c.Finish()
+		as := mockauth.NewMockService(c)
+		tc.mock(as)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/posts", nil)
+		r.Header.Add("Authorization", "token")
+
+		ctx := echo.New().NewContext(r, w)
+
+		hf := NewHandler(nil, as).Auth(next)
+		hf(ctx)
+
+		assert.Equal(t, tc.expCode, w.Code)
+
+	}
+}
+
+func TestHandler_PostAuthor(t *testing.T) {
+	next := func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	}
+
+	testcases := []struct {
+		name    string
+		mock    func(*mockpost.MockService, model.Post)
+		post    model.Post
+		expCode int
+	}{
+		{
+			name: "user is post author",
+			mock: func(s *mockpost.MockService, p model.Post) {
+				s.EXPECT().GetByID(p.ID).Return(p, nil)
+			},
+			post:    model.Post{ID: 1, Title: "Post 1", UserID: "1"},
+			expCode: http.StatusOK,
+		},
+		{
+			name: "post not found",
+			mock: func(s *mockpost.MockService, p model.Post) {
+				s.EXPECT().GetByID(p.ID).Return(model.Post{}, ErrNotFound)
+			},
+			post:    model.Post{ID: 1, Title: "Post 1", UserID: "1"},
+			expCode: http.StatusNotFound,
+		},
+		{
+			name: "internal error",
+			mock: func(s *mockpost.MockService, p model.Post) {
+				s.EXPECT().GetByID(p.ID).Return(model.Post{}, errors.New("internal error"))
+			},
+			post:    model.Post{ID: 1, Title: "Post 1", UserID: "1"},
+			expCode: http.StatusInternalServerError,
+		},
+		{
+			name: "user is not a post author",
+			mock: func(s *mockpost.MockService, p model.Post) {
+				s.EXPECT().GetByID(p.ID).Return(p, nil)
+			},
+			post:    model.Post{ID: 1, Title: "Post 1", UserID: "2"},
+			expCode: http.StatusForbidden,
+		},
+	}
+
+	for _, tc := range testcases {
+		c := gomock.NewController(t)
+		defer c.Finish()
+		ps := mockpost.NewMockService(c)
+		tc.mock(ps, tc.post)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodPatch, "/posts/1", nil)
+		r = r.WithContext(context.WithValue(r.Context(), uIDkey, "1"))
+
+		ctx := echo.New().NewContext(r, w)
+		ctx.SetParamNames("id")
+		ctx.SetParamValues("1")
+
+		hf := NewHandler(ps, nil).PostAuthor(next)
+		hf(ctx)
+
+		assert.Equal(t, tc.expCode, w.Code)
+
+	}
+}
+
 func TestHandler_GetAll(t *testing.T) {
 	testcases := []struct {
 		name     string
