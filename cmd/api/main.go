@@ -6,11 +6,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
-
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
 	_ "github.com/imarrche/nix-ed/docs"
+	"github.com/imarrche/nix-ed/internal/auth"
 	"github.com/imarrche/nix-ed/internal/comment"
 	"github.com/imarrche/nix-ed/internal/model"
 	"github.com/imarrche/nix-ed/internal/post"
@@ -35,26 +35,33 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ph := post.NewHandler(post.NewService(post.NewRepo(db)))
-	ch := comment.NewHandler(comment.NewService(comment.NewRepo(db)))
+	as := auth.NewGoogleService()
+	ph := post.NewHandler(post.NewService(post.NewRepo(db)), as)
+	ch := comment.NewHandler(comment.NewService(comment.NewRepo(db)), as)
+	ah := auth.NewHandler(as)
 
 	e := echo.New()
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	auth := e.Group("/auth")
+	auth.GET("/google/sign-in", ah.GoogleSignIn)
+	auth.GET("/google/callback", ah.GoogleCallback)
+
 	api := e.Group("/api")
 
 	ps := api.Group("/posts")
 	ps.GET("", ph.GetAll)
-	ps.POST("", ph.Create)
+	ps.POST("", ph.Create, ph.Auth)
 	ps.GET("/:id", ph.GetByID)
-	ps.PATCH("/:id", ph.Update)
-	ps.DELETE("/:id", ph.DeleteByID)
+	ps.PATCH("/:id", ph.Update, ph.Auth, ph.PostAuthor)
+	ps.DELETE("/:id", ph.DeleteByID, ph.Auth, ph.PostAuthor)
 
 	cs := api.Group("/comments")
 	cs.GET("", ch.GetAll)
-	cs.POST("", ch.Create)
+	cs.POST("", ch.Create, ch.Auth)
 	cs.GET("/:id", ch.GetByID)
-	cs.PATCH("/:id", ch.Update)
-	cs.DELETE("/:id", ch.DeleteByID)
+	cs.PATCH("/:id", ch.Update, ch.Auth, ch.CommentAuthor)
+	cs.DELETE("/:id", ch.DeleteByID, ch.Auth, ch.CommentAuthor)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
