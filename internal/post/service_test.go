@@ -21,7 +21,7 @@ func TestPostService_GetAll(t *testing.T) {
 		expError error
 	}{
 		{
-			name: "posts are returned",
+			name: "posts are retrieved",
 			mock: func(r *mockpost.MockRepo, ps []model.Post) {
 				r.EXPECT().GetAll().Return(ps, nil)
 

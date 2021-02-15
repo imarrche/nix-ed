@@ -73,7 +73,7 @@ func (h *Handler) Auth(next echo.HandlerFunc) echo.HandlerFunc {
 // CommentAuthor is middleware that ensures that comment's author made a request.
 func (h *Handler) CommentAuthor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		uEmail, ok := c.Request().Context().Value("email").(string)
+		uEmail, ok := c.Request().Context().Value(uEmailKey).(string)
 		if !ok {
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -129,7 +129,7 @@ func (h *Handler) GetAll(c echo.Context) error {
 // @Failure 400 {object} errResponse
 // @Router /comments [post]
 func (h *Handler) Create(c echo.Context) error {
-	email, ok := c.Request().Context().Value("email").(string)
+	email, ok := c.Request().Context().Value(uEmailKey).(string)
 	if !ok {
 		return c.NoContent(http.StatusInternalServerError)
 	}
