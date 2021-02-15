@@ -3,6 +3,8 @@ package comment
 
 import "github.com/imarrche/nix-ed/internal/model"
 
+//go:generate mockgen -source=interface.go -destination=mock/mock.go
+
 // Repo is the interface all comment repositories must implement.
 type Repo interface {
 	GetAll() ([]model.Comment, error)

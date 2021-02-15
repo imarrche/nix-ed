@@ -1,2 +1,5 @@
 # build related
 build/
+
+# testing related
+coverage.html
